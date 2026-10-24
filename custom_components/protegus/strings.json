@@ -1,0 +1,71 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Protegus",
+        "description": "Choose how to sign in. If your account uses Google/Apple sign-in and has no password, use the token option.",
+        "menu_options": {
+          "password": "E-mail and password",
+          "token": "Paste access token"
+        }
+      },
+      "password": {
+        "title": "Sign in",
+        "data": {
+          "region": "Region",
+          "email": "E-mail",
+          "password": "Password"
+        }
+      },
+      "token": {
+        "title": "Access token",
+        "description": "Paste the Bearer token and the X-Device-Id value from the same browser request (Authorization and X-Device-Id headers).",
+        "data": {
+          "region": "Region",
+          "token": "Token",
+          "device_id": "Device ID (X-Device-Id header)"
+        }
+      },
+      "system": {
+        "title": "Select system",
+        "data": {
+          "system_id": "System"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Sign-in failed",
+      "cannot_connect": "Cannot connect to Protegus"
+    },
+    "abort": {
+      "already_configured": "This system is already configured",
+      "no_systems": "No systems found on this account"
+    }
+  },
+  "selector": {
+    "region": {
+      "options": {
+        "eu": "Europe",
+        "na": "North America",
+        "asia": "Asia"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      }
+    },
+    "sensor": {
+      "signal_level": {
+        "name": "Signal level"
+      }
+    },
+    "button": {
+      "sign_out": {
+        "name": "Sign out"
+      }
+    }
+  }
+}

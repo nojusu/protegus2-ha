@@ -1,0 +1,71 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Protegus",
+        "description": "Pasirinkite prisijungimo būdą. Jei paskyra prijungta per Google/Apple ir slaptažodžio neturi, naudokite žetoną.",
+        "menu_options": {
+          "password": "El. paštas ir slaptažodis",
+          "token": "Įklijuoti prieigos žetoną"
+        }
+      },
+      "password": {
+        "title": "Prisijungimas",
+        "data": {
+          "region": "Regionas",
+          "email": "El. paštas",
+          "password": "Slaptažodis"
+        }
+      },
+      "token": {
+        "title": "Prieigos žetonas",
+        "description": "Įklijuok Bearer žetoną ir X-Device-Id reikšmę iš tos pačios naršyklės užklausos (Authorization ir X-Device-Id antraštės).",
+        "data": {
+          "region": "Regionas",
+          "token": "Žetonas",
+          "device_id": "Įrenginio ID (X-Device-Id antraštė)"
+        }
+      },
+      "system": {
+        "title": "Pasirinkite sistemą",
+        "data": {
+          "system_id": "Sistema"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Prisijungti nepavyko",
+      "cannot_connect": "Nepavyko prisijungti prie Protegus"
+    },
+    "abort": {
+      "already_configured": "Ši sistema jau sukonfigūruota",
+      "no_systems": "Paskyroje sistemų nerasta"
+    }
+  },
+  "selector": {
+    "region": {
+      "options": {
+        "eu": "Europa",
+        "na": "Šiaurės Amerika",
+        "asia": "Azija"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "online": {
+        "name": "Prisijungusi"
+      }
+    },
+    "sensor": {
+      "signal_level": {
+        "name": "Signalo lygis"
+      }
+    },
+    "button": {
+      "sign_out": {
+        "name": "Atsijungti"
+      }
+    }
+  }
+}
