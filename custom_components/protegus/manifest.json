@@ -1,12 +1,12 @@
 {
   "domain": "protegus",
   "name": "Protegus",
-  "codeowners": [],
+  "codeowners": ["@nojusu"],
   "config_flow": true,
-  "documentation": "https://web.protegus.app",
+  "documentation": "https://github.com/nojusu/protegus2-ha",
   "integration_type": "hub",
   "iot_class": "cloud_push",
-  "issue_tracker": "https://example.invalid/protegus/issues",
+  "issue_tracker": "https://github.com/nojusu/protegus2-ha/issues",
   "requirements": [
     "python-socketio[asyncio_client]>=5.11.0"
   ],
