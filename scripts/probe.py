@@ -33,7 +33,7 @@ async def main():
             for ar in sysd.get("areas", []):
                 print(f"  area {ar['id']} '{ar['name']}' status={ar['status']} alarm_in_memory={ar['alarm_in_memory']}")
             for p in sysd.get("pgms", []):
-                if p.get("hw_assigned"):
+                if p.get("hw_assigned") or p.get("enabled"):
                     print(f"  pgm {p['id']} '{p['name']}' type={p['type']} on={p['on']}")
         if a.pgm:
             print("toggle ->", await api.toggle_pgm(a.pgm))

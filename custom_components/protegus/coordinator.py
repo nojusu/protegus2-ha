@@ -85,7 +85,7 @@ class ProtegusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "pgms": {
                 p["id"]: _pick(p, PGM_KEYS)
                 for p in system.get("pgms", [])
-                if p.get("hw_assigned")
+                if p.get("hw_assigned") or p.get("enabled")
             },
         }
 
