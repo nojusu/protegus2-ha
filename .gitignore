@@ -1,0 +1,13 @@
+# Browser captures contain tokens and session data - never commit them
+*.har
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

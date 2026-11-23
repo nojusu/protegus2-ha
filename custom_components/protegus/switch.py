@@ -33,7 +33,12 @@ class ProtegusPgmSwitch(ProtegusEntity, SwitchEntity):
 
     @property
     def _pgm(self) -> dict[str, Any]:
-        return self.coordinator.data["pgms"][self._pgm_id]
+        # empty dict if the PGM vanished from the account (entity goes unavailable)
+        return self.coordinator.data["pgms"].get(self._pgm_id, {})
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._pgm_id in self.coordinator.data["pgms"]
 
     @property
     def name(self) -> str:  # type: ignore[override]
@@ -51,10 +56,13 @@ class ProtegusPgmSwitch(ProtegusEntity, SwitchEntity):
             result = await self.coordinator.api.toggle_pgm(self._pgm_id)
         except ProtegusError as err:
             raise HomeAssistantError(f"Protegus: {err}") from err
-        new = (result.get("pgm") or {}).get("on")
+        new = (result.get("pgm") or {}).get("on") if isinstance(result, dict) else None
         if new is not None:
             self._pgm["on"] = new
             self.async_write_ha_state()
+        # The API can only toggle, so a wrong local state would invert the next
+        # command. Always read the real state back (the response is unverified).
+        await self.coordinator.async_request_refresh()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._toggle_to(True)

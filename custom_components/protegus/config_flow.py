@@ -112,9 +112,17 @@ class ProtegusConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _after_auth(self, api: ProtegusApi) -> ConfigFlowResult:
         if self._reauth_entry is not None:
-            return self.async_update_reload_and_abort(
-                self._reauth_entry, data={**self._reauth_entry.data, **self._data}
-            )
+            entry = self._reauth_entry
+            # Make sure the new credentials can still see the configured system.
+            systems = await api.get_systems()
+            if not any(s.get("id") == entry.data[CONF_SYSTEM_ID] for s in systems):
+                return self.async_abort(reason="wrong_account")
+            data = {**entry.data, **self._data}
+            if CONF_EMAIL not in self._data:
+                # switched to token sign-in: drop the old password login
+                data.pop(CONF_EMAIL, None)
+                data.pop(CONF_PASSWORD, None)
+            return self.async_update_reload_and_abort(entry, data=data)
         self._api = api
         self._systems = await api.get_systems()
         if not self._systems:

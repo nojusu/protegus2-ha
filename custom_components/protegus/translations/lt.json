@@ -39,7 +39,9 @@
     },
     "abort": {
       "already_configured": "Ši sistema jau sukonfigūruota",
-      "no_systems": "Paskyroje sistemų nerasta"
+      "no_systems": "Paskyroje sistemų nerasta",
+      "reauth_successful": "Prisijungta iš naujo",
+      "wrong_account": "Ši paskyra neturi prieigos prie sukonfigūruotos sistemos. Prisijunkite paskyra, kuriai ji priklauso."
     }
   },
   "selector": {
@@ -55,6 +57,9 @@
     "binary_sensor": {
       "online": {
         "name": "Prisijungusi"
+      },
+      "realtime": {
+        "name": "Tiesioginiai atnaujinimai"
       }
     },
     "sensor": {

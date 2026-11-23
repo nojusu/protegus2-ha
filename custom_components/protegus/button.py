@@ -36,8 +36,12 @@ class ProtegusPgmButton(ProtegusEntity, ButtonEntity):
         self._attr_unique_id = f"{coordinator.system_id}_pgm_{pgm_id}_pulse"
 
     @property
+    def available(self) -> bool:
+        return super().available and self._pgm_id in self.coordinator.data["pgms"]
+
+    @property
     def name(self) -> str:  # type: ignore[override]
-        pgm = self.coordinator.data["pgms"][self._pgm_id]
+        pgm = self.coordinator.data["pgms"].get(self._pgm_id, {})
         return pgm.get("name") or f"PGM {pgm.get('queue_no')}"
 
     async def async_press(self) -> None:

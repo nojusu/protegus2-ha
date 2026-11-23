@@ -39,7 +39,9 @@
     },
     "abort": {
       "already_configured": "This system is already configured",
-      "no_systems": "No systems found on this account"
+      "no_systems": "No systems found on this account",
+      "reauth_successful": "Signed in again successfully",
+      "wrong_account": "This account does not have access to the configured system. Sign in with the account that owns it."
     }
   },
   "selector": {
@@ -55,6 +57,9 @@
     "binary_sensor": {
       "online": {
         "name": "Online"
+      },
+      "realtime": {
+        "name": "Realtime updates"
       }
     },
     "sensor": {

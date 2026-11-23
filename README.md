@@ -9,12 +9,12 @@
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-Custom-orange.svg" alt="HACS Custom"></a>
-  <img src="https://img.shields.io/badge/version-0.1.4-blue.svg" alt="Version 0.1.4">
+  <img src="https://img.shields.io/badge/version-0.1.5-blue.svg" alt="Version 0.1.5">
   <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5.svg" alt="Home Assistant 2025.1+">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License"></a>
 </p>
 
-**Home Assistant integration for Protegus2 alarm systems (unofficial, v0.1.4).**
+**Home Assistant integration for Protegus2 alarm systems (unofficial, v0.1.5).**
 
 Reverse-engineered from `web.protegus.app`: Protegus has an API but no public documentation. This project is not affiliated with or endorsed by Protegus. Made using Claude AI.
 
@@ -25,8 +25,8 @@ Reverse-engineered from `web.protegus.app`: Protegus has an API but no public do
 - Control alarm areas: arm away, arm home, arm night, disarm.
 - PIN code is required for **every** arm/disarm and is never stored.
 - PGM outputs as switches and pulse buttons.
-- Realtime updates via socket.io, plus polling as a fallback (60 s by default, configurable).
-- Diagnostics: system online state and signal level.
+- Realtime updates via socket.io, plus polling as a fallback (60 s by default, configurable). A dropped socket reconnects by itself.
+- Diagnostics: system online state, signal level and realtime connection state, plus a **Download diagnostics** file with secrets removed.
 - **Sign out** button: ends the server session and wipes the token and login from HA.
 - Sign in with e-mail and password, or with a token (Google / Apple accounts).
 - Translations: Lithuanian and English.
@@ -85,9 +85,10 @@ Pick the region your account belongs to: **Europe** (`web.protegus.app`), **Nort
 | Entity | Type | Description |
 |---|---|---|
 | Area | `alarm_control_panel` | Arm away, arm home, arm night, disarm. Home and night modes appear only if the system supports them. |
-| PGM (level type) | `switch` | Turns the output on or off. The command is only sent if the state differs. |
+| PGM (level type) | `switch` | Turns the output on or off. The command is only sent if the state differs, and the real state is read back afterwards. |
 | PGM (pulse) | `button` | Triggers an output pulse. |
 | Online | `binary_sensor` (diagnostic) | Whether the alarm panel is connected to Protegus. |
+| Realtime updates | `binary_sensor` (diagnostic) | On: state changes arrive instantly (socket.io). Off: polling only. |
 | Signal level | `sensor` (diagnostic) | Connection signal strength. |
 | Sign out | `button` (config) | Sign out, see below. |
 
@@ -95,7 +96,7 @@ Pick the region your account belongs to: **Europe** (`web.protegus.app`), **Nort
 
 State changes normally arrive instantly through the socket.io connection. In addition, the integration polls the Protegus API (every 60 s by default) as a fallback. To change the polling interval: **Settings → Devices & services → Protegus → Configure** (10 to 3600 seconds). It applies after the next refresh, without a restart.
 
-Shorter intervals put more load on the unofficial Protegus API, and I do not know its rate limits, so keep it as long as you can live with. If updates only appear once per interval, the socket is probably not connected, see Troubleshooting.
+Shorter intervals put more load on the unofficial Protegus API, and I do not know its rate limits, so keep it as long as you can live with. If updates only appear once per interval, the socket is probably not connected: check the **Realtime updates** entity, see Troubleshooting.
 
 ## PIN code and automations
 
@@ -139,7 +140,7 @@ The button acts immediately, without a confirmation.
 - E-mail and password sign-in (`POST /login`) has not been tested against a real account, because development used a Google sign-in.
 - The "triggered" state is a guess (`alarm_in_memory` while armed).
 - The `toggle-pgm` response shape is unverified.
-- socket.io connection with the token in the URL is unverified. If it fails, the integration falls back to polling only (60 s).
+- socket.io connection with the token in the URL is unverified. If it fails, the integration falls back to polling and retries the socket with fresh credentials every 5 minutes.
 - The unofficial API can change at any time and the integration may stop working.
 
 ## Troubleshooting
@@ -150,8 +151,10 @@ The button acts immediately, without a confirmation.
 | **Protegus: wrong PIN** | The server rejected the PIN. Check the code. |
 | **Protegus: PIN code is required** | Enter the code in the card or add `code:` in the automation. |
 | Entities *unavailable* | Check the **Online** diagnostic entity and that HA has internet access. |
-| State only updates once per interval (e.g. every minute) | The realtime socket.io connection is probably not working and only polling is active. Look in **Settings → System → Logs** for `Protegus socket.io connect failed` or `No socket credentials` and open an issue with that line. You can also shorten the update interval, see above. |
+| State only updates once per interval (e.g. every minute) | If the **Realtime updates** entity is off, the socket.io connection is not working and only polling is active. Look in **Settings → System → Logs** for `Protegus socket.io connect failed` or `No socket credentials` and open an issue with that line. You can also shorten the update interval, see above. |
 | Asked to sign in after ~a year | The token expired, provide a new one through the HA notification. |
+
+For bug reports, attach the diagnostics file: **Settings → Devices & services → Protegus → ⋮ → Download diagnostics**. Tokens, passwords, e-mail, device ID and user names are removed from it automatically.
 
 Debug log (remove tokens and codes before sharing it):
 

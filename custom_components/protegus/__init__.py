@@ -67,7 +67,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ProtegusConfigEntry) -> 
 
 async def _async_options_updated(hass: HomeAssistant, entry: ProtegusConfigEntry) -> None:
     """Apply a changed update interval; it takes effect after the next refresh."""
-    entry.runtime_data.update_interval = scan_interval(entry)
+    # The listener also fires when entry.data changes (e.g. a refreshed token),
+    # so only touch the coordinator when the interval really changed.
+    coordinator = entry.runtime_data
+    new_interval = scan_interval(entry)
+    if coordinator.update_interval != new_interval:
+        coordinator.update_interval = new_interval
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ProtegusConfigEntry) -> bool:

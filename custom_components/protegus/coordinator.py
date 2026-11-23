@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from datetime import timedelta
 from typing import Any
 
@@ -26,6 +27,9 @@ AREA_KEYS = (
     "last_person_name", "alarm_time", "alarm_type",
 )
 PGM_KEYS = ("id", "name", "queue_no", "on", "type", "hw_assigned", "enabled", "pulse_time_in_seconds")
+
+# If the socket is down, try a fresh connection (new socket token) at most this often.
+SOCKET_RETRY_SECONDS = 300
 
 
 def scan_interval(entry: ConfigEntry) -> timedelta:
@@ -55,6 +59,16 @@ class ProtegusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.api = api
         self.system_id = system_id
         self._sio: socketio.AsyncClient | None = None
+        self._socket_enabled = False      # set once setup starts the socket
+        self._socket_connected = False
+        self._socket_ever_connected = False
+        self._socket_restarting = False
+        self._socket_last_attempt = 0.0
+
+    @property
+    def socket_connected(self) -> bool:
+        """True while realtime (push) updates are arriving."""
+        return self._socket_connected
 
     # -------------------------------------------------------------- polling
     async def _async_update_data(self) -> dict[str, Any]:
@@ -70,6 +84,8 @@ class ProtegusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         system = next((s for s in systems if s.get("id") == self.system_id), None)
         if system is None:
             raise UpdateFailed(f"System {self.system_id} not found in account")
+
+        self._maybe_restart_socket()
 
         status = system.get("status") or {}
         return {
@@ -91,10 +107,18 @@ class ProtegusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     # -------------------------------------------------------------- socket
     async def async_start_socket(self) -> None:
+        """Enable realtime updates and connect (called once from setup)."""
+        self._socket_enabled = True
+        await self._async_connect_socket()
+
+    async def _async_connect_socket(self) -> None:
+        self._socket_last_attempt = time.monotonic()
         if not self.api.socket_token or not self.api.socket_port:
             _LOGGER.warning("No socket credentials, falling back to polling only")
             return
         sio = socketio.AsyncClient(reconnection=True, logger=False, engineio_logger=False)
+        sio.on("connect", self._on_connect)
+        sio.on("disconnect", self._on_disconnect)
         sio.on("auto-reload-channel", self._on_area)
         sio.on("pgm-channel", self._on_pgm)
         sio.on("system-status-reload", self._on_system)
@@ -136,11 +160,70 @@ class ProtegusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.hass.config_entries.async_schedule_reload(entry.entry_id)
 
     async def async_stop_socket(self) -> None:
-        if self._sio is not None:
+        """Disconnect and stop trying to reconnect (unload / sign-out)."""
+        self._socket_enabled = False
+        await self._async_disconnect_socket()
+
+    async def _async_disconnect_socket(self) -> None:
+        sio, self._sio = self._sio, None
+        if sio is not None:
             try:
-                await self._sio.disconnect()
-            finally:
-                self._sio = None
+                await sio.disconnect()
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.debug("Protegus socket.io disconnect error: %s", type(err).__name__)
+        self._set_socket_connected(False)
+
+    def _maybe_restart_socket(self) -> None:
+        """Called on every poll: if the socket is down for a while, start over.
+
+        socket.io's own reconnect reuses the original URL, which carries the
+        socket token. If that token changed (e.g. after an automatic re-login)
+        or the first connect failed, it would never recover by itself.
+        """
+        if (
+            not self._socket_enabled
+            or self._socket_restarting
+            or (self._sio is not None and self._sio.connected)
+            or time.monotonic() - self._socket_last_attempt < SOCKET_RETRY_SECONDS
+        ):
+            return
+        self._socket_restarting = True
+        self.config_entry.async_create_background_task(
+            self.hass, self._async_restart_socket(), f"{DOMAIN}_socket_restart"
+        )
+
+    async def _async_restart_socket(self) -> None:
+        try:
+            _LOGGER.debug("Protegus socket.io is down, reconnecting with fresh credentials")
+            await self._async_disconnect_socket()
+            try:
+                await self.api.load_profile()  # refreshes socket_token / socket_port
+            except ProtegusError as err:
+                _LOGGER.debug("Could not refresh socket credentials: %s", err)
+                self._socket_last_attempt = time.monotonic()
+                return
+            if self._socket_enabled:
+                await self._async_connect_socket()
+        finally:
+            self._socket_restarting = False
+
+    def _set_socket_connected(self, connected: bool) -> None:
+        if self._socket_connected != connected:
+            self._socket_connected = connected
+            self.async_update_listeners()
+
+    async def _on_connect(self) -> None:
+        reconnect = self._socket_ever_connected
+        self._socket_ever_connected = True
+        self._set_socket_connected(True)
+        if reconnect:
+            # pushes sent while we were disconnected are lost: fetch the state
+            _LOGGER.debug("Protegus socket.io reconnected, refreshing state")
+            await self.async_request_refresh()
+
+    async def _on_disconnect(self, *args: Any) -> None:
+        _LOGGER.debug("Protegus socket.io disconnected")
+        self._set_socket_connected(False)
 
     @staticmethod
     def _decode(payload: Any) -> dict[str, Any] | None:
@@ -174,7 +257,8 @@ class ProtegusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not msg or msg.get("system_id") != self.system_id or not self.data:
             return
         info = self.data["info"]
-        info["online"] = msg.get("system_status") == "online"
+        if "system_status" in msg:
+            info["online"] = msg["system_status"] == "online"
         if "signal_level" in msg:
             info["signal"] = msg["signal_level"]
         self.async_set_updated_data(self.data)

@@ -46,7 +46,12 @@ class ProtegusAlarm(ProtegusEntity, AlarmControlPanelEntity):
 
     @property
     def _area(self) -> dict[str, Any]:
-        return self.coordinator.data["areas"][self._area_id]
+        # empty dict if the area vanished from the account (entity goes unavailable)
+        return self.coordinator.data["areas"].get(self._area_id, {})
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._area_id in self.coordinator.data["areas"]
 
     @property
     def name(self) -> str:  # type: ignore[override]
