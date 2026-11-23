@@ -1,6 +1,7 @@
 {
   "domain": "protegus",
   "name": "Protegus",
+  "categories": ["security_safety.alarm_systems"],
   "codeowners": ["@nojusu"],
   "config_flow": true,
   "documentation": "https://github.com/nojusu/protegus2-ha",
